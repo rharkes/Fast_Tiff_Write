@@ -2,7 +2,20 @@ classdef Fast_Tiff
     %FAST_TIFF Aims to write tiff data quickly on the fly
     %by writing the image data first, and end the file with IFD's
     %based on http://www.fileformat.info/format/tiff/egff.htm
-    %
+    
+    %This program is free software: you can redistribute it and/or modify
+    %it under the terms of the GNU General Public License as published by
+    %the Free Software Foundation, either version 3 of the License, or
+    %(at your option) any later version.
+
+    %This program is distributed in the hope that it will be useful,
+    %but WITHOUT ANY WARRANTY; without even the implied warranty of
+    %MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    %GNU General Public License for more details.
+
+    %You should have received a copy of the GNU General Public License
+    %along with this program.  If not, see <https://www.gnu.org/licenses/>.
+    
     properties (SetAccess = protected)
         TagList %TagList (store as list of uint32)
         imsize
@@ -160,4 +173,3 @@ classdef Fast_Tiff
         end
     end
 end
-
