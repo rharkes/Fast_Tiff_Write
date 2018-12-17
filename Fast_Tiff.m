@@ -68,7 +68,7 @@ classdef Fast_Tiff
                 obj.TagList(4:6) = obj.TifTag(obj,'ImageWidth','long',1,size(img,1));
                 obj.TagList(7:9) = obj.TifTag(obj,'ImageLength','long',1,size(img,2));
                 obj.TagList(10:12) = obj.TifTag(obj,'BitsPerSample','short',1,bps*8);
-                obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,0); %no compression
+                obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,1); %no compression
                 obj.TagList(16:18) = obj.TifTag(obj,'PhotometricInterpretation','short',1,1); %BlackIsZero
                 %obj.TagList(19:21) = obj.TifTag(obj,'StripOffsets','long',1,0); %this will be put in when the file is closed
                 if ismatrix(img)
