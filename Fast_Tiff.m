@@ -1,4 +1,4 @@
-classdef Fast_Tiff
+classdef Fast_Tiff  < handle
     %FAST_TIFF Aims to write tiff data quickly on the fly
     %by writing the image data first, and end the file with IFD's
     %based on http://www.fileformat.info/format/tiff/egff.htm
@@ -15,8 +15,11 @@ classdef Fast_Tiff
 
     %You should have received a copy of the GNU General Public License
     %along with this program.  If not, see <https://www.gnu.org/licenses/>.
-    
     properties (SetAccess = protected)
+        Images_Written
+        Closed
+    end
+    properties (SetAccess = protected, Hidden = true)
         TagList %TagList (store as list of uint32)
         imsize
         classname
@@ -24,7 +27,7 @@ classdef Fast_Tiff
         isRGB
         StripOffsets %offsets to all images
     end
-    properties (SetAccess = immutable)
+    properties (SetAccess = immutable, Hidden = true)
         filename
         fid
         TagTypes
@@ -44,8 +47,11 @@ classdef Fast_Tiff
             obj.writeIFH(0);
             obj.TagList = uint32([]);
             obj.StripOffsets = uint32([]);
+            obj.Images_Written=0;
+            obj.Closed = false;
         end
-        function obj = WriteIMG(obj,img,pixelsize)
+        function WriteIMG(obj,img,pixelsize)
+            if obj.Closed,warning('Ignoring attempted write on closed image');return;end
             if nargin<3||isempty(pixelsize),pixelsize=1;end
             %assume equal images will be written with equal IFD's
             if isempty(obj.TagList) %construct the TagList from this img
@@ -104,6 +110,7 @@ classdef Fast_Tiff
             obj.StripOffsets(end+1)=ftell(obj.fid);%start of the image
             if obj.isRGB,img = permute(img,[3,1,2]);end %chunky is accepted more than planar
             fwrite(obj.fid,img,obj.classname);
+            obj.Images_Written = obj.Images_Written+1;
         end
         function close(obj)
             %write all IFDs
@@ -122,6 +129,7 @@ classdef Fast_Tiff
             %point the header to the first one
             obj.writeIFH(IFDOffset);
             fclose(obj.fid);
+            obj.Closed = true;
         end
     end
     

@@ -9,7 +9,7 @@ IM=IM*(2^15/max(IM(:)));
 IM = repmat(IM,[1,1,N])+randi((2^15)-1,[size(IM,1),size(IM,2),N],'uint16');
 S = (numel(IM)/N*2)/2^20;
 
-
+%https://nl.mathworks.com/matlabcentral/fileexchange/35684-multipage-tiff-stack
 %imread writespeed
 methods = {'imwrite','tifflib','fTIF'};
 for M = 1:length(methods)
@@ -54,7 +54,7 @@ for M = 1:length(methods)
             tic
             fTIF = Fast_Tiff(filename);
             for ct = 1:size(IM,3)
-                fTIF = fTIF.WriteIMG(IM(:,:,ct)');
+                fTIF.WriteIMG(IM(:,:,ct)');
                 t(ct)=toc;
             end
             tic

@@ -1,7 +1,7 @@
 close all; clear all; clc;
 img=imread('landOcean.jpg');
 filename = 'test.tif';
-switch 'color'
+switch 'gray'
     case 'gray'
         img = uint16(sum(img,3));
         img = img-min(img(:));
@@ -10,8 +10,8 @@ switch 'color'
         img2 = uint16(conv2(img, filt, 'same'));
         %write
         fTIF = Fast_Tiff(filename);
-        fTIF = fTIF.WriteIMG(permute(img,[2,1,3]),0.125);
-        fTIF = fTIF.WriteIMG(permute(img2,[2,1,3]),0.125);
+        fTIF.WriteIMG(permute(img,[2,1,3]),0.125);
+        fTIF.WriteIMG(permute(img2,[2,1,3]),0.125);
         fTIF.close;
         %read
         I = imfinfo(filename);
@@ -24,8 +24,8 @@ switch 'color'
         img2 = circshift(img,1,3);
         %write
         fTIF = Fast_Tiff(filename);
-        fTIF = fTIF.WriteIMG(permute(img,[2,1,3]),0.125);
-        fTIF = fTIF.WriteIMG(permute(img2,[2,1,3]),0.125);
+        fTIF.WriteIMG(permute(img,[2,1,3]),0.125);
+        fTIF.WriteIMG(permute(img2,[2,1,3]),0.125);
         fTIF.close;
         %read
         I = imfinfo(filename);
