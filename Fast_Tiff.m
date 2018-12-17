@@ -21,6 +21,7 @@ classdef Fast_Tiff
         imsize
         classname
         BytePerIm
+        isRGB
         StripOffsets %offsets to all images
     end
     properties (SetAccess = immutable)
@@ -67,14 +68,22 @@ classdef Fast_Tiff
                 obj.TagList(1:3) = obj.TifTag(obj,'NewSubfileType','long',1,0);
                 obj.TagList(4:6) = obj.TifTag(obj,'ImageWidth','long',1,size(img,1));
                 obj.TagList(7:9) = obj.TifTag(obj,'ImageLength','long',1,size(img,2));
-                obj.TagList(10:12) = obj.TifTag(obj,'BitsPerSample','short',1,bps*8);
                 obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,1); %no compression
-                obj.TagList(16:18) = obj.TifTag(obj,'PhotometricInterpretation','short',1,1); %BlackIsZero
                 %obj.TagList(19:21) = obj.TifTag(obj,'StripOffsets','long',1,0); %this will be put in when the file is closed
-                if ismatrix(img)
+                if ismatrix(img) %uint8 or uint16
+                    obj.TagList(10:12) = obj.TifTag(obj,'BitsPerSample','short',1,bps*8);
+                    obj.TagList(16:18) = obj.TifTag(obj,'PhotometricInterpretation','short',1,1); %BlackIsZero
                     obj.TagList(22:24) = obj.TifTag(obj,'SamplesPerPixel','short',1,1);
-                elseif ndims(img)==3&&size(img,3)==3
+                elseif ndims(img)==3&&size(img,3)==3 %RGB
+                    %three words (6 bytes) cannot be stored in the TagList
+                    %so needs a pointer.
+                    pos = ftell(obj.fid);
+                    obj.writeWORD(8);obj.writeWORD(8);obj.writeWORD(8);
+                    obj.TagList(10:12) = obj.TifTag(obj,'BitsPerSample','short',3,pos);
+                    obj.TagList(16:18) = obj.TifTag(obj,'PhotometricInterpretation','short',1,2); %RGB
                     obj.TagList(22:24) = obj.TifTag(obj,'SamplesPerPixel','short',1,3);
+                    obj.TagList(40:42) = obj.TifTag(obj,'PlanarConfiguration','short',1,1); %1 chunky 2 planar
+                    obj.isRGB = true;
                 else
                     error('Only 2 or 3 dimensions allowed')
                 end
@@ -87,15 +96,13 @@ classdef Fast_Tiff
                 obj.TagList(31:33) = obj.TifTag(obj,'XResolution','rational',1,pos); 
                 obj.TagList(34:36) = obj.TifTag(obj,'YResolution','rational',1,pos); 
                 obj.TagList(37:39) = obj.TifTag(obj,'ResolutionUnit','short',1,1);
-                if ndims(img)==3
-                    obj.TagList(40:42) = obj.TifTag(obj,'PlanarConfiguration','short',1,2);
-                end
             else %check if the image is equal to the first image
                 if ndims(img)~=length(obj.imsize),error('different image');end
                 if ~all(size(img)==obj.imsize),error('different image');end
                 if ~strcmp(class(img),obj.classname),error('different image');end
             end
             obj.StripOffsets(end+1)=ftell(obj.fid);%start of the image
+            if obj.isRGB,img = permute(img,[3,1,2]);end %chunky is accepted more than planar
             fwrite(obj.fid,img,obj.classname);
         end
         function close(obj)
