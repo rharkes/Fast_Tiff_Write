@@ -52,14 +52,14 @@ for M = 1:length(methods)
         case 'fTIF'
             t(1)=0;
             tic
-            fTIF = Fast_Tiff(filename);
+            fTIF = Fast_Tiff_Write(filename);
             for ct = 1:size(IM,3)
                 fTIF.WriteIMG(IM(:,:,ct)');
                 t(ct)=toc;
             end
             tic
             fTIF.close;
-            toc            
+            fprintf(1,'closing the tif file took %.5f seconds\n',toc);
         otherwise
             error('unknown method')
     end
