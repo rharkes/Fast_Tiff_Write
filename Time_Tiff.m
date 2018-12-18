@@ -1,6 +1,6 @@
 clear all;close all; clc; fclose all;
 %generate some data
-N=1E2;
+N=1E3;
 IM=imread('landOcean.jpg');
 IM = uint16(sum(IM,3));
 IM = IM(100:310,960:1170);
@@ -15,7 +15,7 @@ methods = {'imwrite','tifflib','fTIF'};
 for M = 1:length(methods)
     method = methods{M};
     %timing vector
-    t = zeros(1,size(IM,3)+1);
+    t = nan(1,size(IM,3)+1);
     %file
     filename = [method,'.tif'];
     if exist(filename,'file'), delete(filename);end
@@ -25,7 +25,7 @@ for M = 1:length(methods)
             t(1)=0;
             imwrite(IM(:,:,1),filename);
             t(2)=toc;
-            for ct = 2:size(IM,3)
+            for ct = 2:100
                 imwrite(IM(:,:,ct),filename,'WriteMode','append');
                 t(ct+1)=toc;
             end
@@ -33,7 +33,7 @@ for M = 1:length(methods)
             t(1)=0;
             tic;
             tf = Tiff(filename,'w');
-            for ct = 1:size(IM,3)
+            for ct = 1:200
                 if ct>1,tf.writeDirectory;end
                 tf.setTag('Photometric',Tiff.Photometric.MinIsBlack);
                 tf.setTag('Compression',Tiff.Compression.None);
@@ -59,7 +59,7 @@ for M = 1:length(methods)
             end
             tic
             fTIF.close;
-            toc
+            toc            
         otherwise
             error('unknown method')
     end
@@ -67,7 +67,7 @@ for M = 1:length(methods)
     y = S./diff(t);
     subplot(1,length(methods),M)
     plot([1:size(IM,3)],y);
-    title(sprintf('Writing with %s; mean = %.2f MB/s',method,mean(y)))
+    title(sprintf('Writing with %s; mean = %.2f MB/s',method,mean(y,'omitnan')))
     ylabel('Writing speed (MB/s)')
     xlabel('Frame');
     drawnow;
