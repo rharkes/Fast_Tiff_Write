@@ -1,10 +1,17 @@
 classdef Fast_Tiff_Write  < handle
     %FAST_TIFF_WRITE Aims to write tiff data quickly on the fly
     %by writing the image data first, and end the file with IFD's
-    %Based on tiff Revison 6.0, published June 3, 1992 by Aldus Corporation
     
-    %Fast Tiff Write v1.0
-    %by R.Harkes 18-12-2018
+    %TIFF was published in 1986 by Aldus Corporation. Aldus merged with
+    %Adobe Systems Incorporated on 1st of September  1994.
+    %Following documents contain canonical TIFF specifications:
+    % 1) Tiff Revison 6.0, published June 3, 1992 by Aldus Corporation
+    % 2) Adobe PageMaker® 6.0 TIFF Technical Notes, published September 14, 1995 by Adobe Systems Incorporated
+    % 3) Adobe Photoshop® TIFF Technical Notes, published March 22, 2002 by Adobe Systems Incorporated
+    % 4) Adobe Photoshop® TIFF Technical Note 3, published April 3, 2005 by Adobe Systems Incorporated
+    
+    %Fast Tiff Write v2.0
+    %by R.Harkes 05-07-2019
     
     %This program is free software: you can redistribute it and/or modify
     %it under the terms of the GNU General Public License as published by
@@ -34,15 +41,24 @@ classdef Fast_Tiff_Write  < handle
     properties (SetAccess = immutable, Hidden = true)
         filename
         fid
+        pixelsize
+        compression
         TagTypes
         DataTypes
+        mylocation
     end
     
     methods
-        function obj = Fast_Tiff_Write(filename)
+        function obj = Fast_Tiff_Write(filename,pixelsize,compression)
             %FAST_TIFF Construct an instance of this class
+            %pixelsize in (dots per centimeter)
             %   Detailed explanation goes here
+            if nargin<2||isempty(pixelsize),pixelsize=1;end
+            if nargin<3||isempty(compression),compression=0;end %no compression by default
+            [p,~,~] = fileparts(mfilename('fullpath'));obj.mylocation=p;
             obj.filename = filename;
+            obj.pixelsize = pixelsize; %pixels / um
+            obj.compression = compression;
             obj.fid = fopen(filename,'w','l');
             %set objects static values
             obj.DataTypes = obj.TellDataTypes();
@@ -54,9 +70,8 @@ classdef Fast_Tiff_Write  < handle
             obj.Images_Written=0;
             obj.Closed = false;
         end
-        function WriteIMG(obj,img,pixelsize)
+        function WriteIMG(obj,img)
             if obj.Closed,warning('Ignoring attempted write on closed image');return;end
-            if nargin<3||isempty(pixelsize),pixelsize=1;end
             %assume equal images will be written with equal IFD's
             if isempty(obj.TagList) %construct the TagList from this img
                 %store basic image information in the class
@@ -92,7 +107,11 @@ classdef Fast_Tiff_Write  < handle
                 obj.TagList(1:3) = obj.TifTag(obj,'NewSubfileType','long',1,0);
                 obj.TagList(4:6) = obj.TifTag(obj,'ImageWidth','long',1,size(img,1));
                 obj.TagList(7:9) = obj.TifTag(obj,'ImageLength','long',1,size(img,2));
-                obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,1); %no compression
+                if obj.compression ==0
+                    obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,1); %no compression
+                else
+                    obj.TagList(13:15) = obj.TifTag(obj,'Compression','short',1,8); %See document #3. 32946 is supported by libTiff as PKZIP-style Deflate encoding
+                end
                 %obj.TagList(19:21) = obj.TifTag(obj,'StripOffsets','long',1,0); %this will be put in when the file is closed
                 if obj.isRGB %RGB
                     %three words (6 bytes) cannot be stored in the TagList so needs a pointer.
@@ -110,11 +129,11 @@ classdef Fast_Tiff_Write  < handle
                 obj.TagList(28:30) = obj.TifTag(obj,'StripByteCounts','long',1,obj.BytePerIm); %nr bytes per image
                 %a rational cannot be stored in the TagList itself, so it needs a pointer.
                 pos = ftell(obj.fid);
-                obj.writeRat(pixelsize);
+                obj.writeRat(obj.pixelsize);
                 obj.TagList(31:33) = obj.TifTag(obj,'XResolution','rational',1,pos); 
                 obj.TagList(34:36) = obj.TifTag(obj,'YResolution','rational',1,pos); 
-                obj.TagList(37:39) = obj.TifTag(obj,'ResolutionUnit','short',1,1);
-                obj.TagList(40:42) = obj.TifTag(obj,'PlanarConfiguration','short',1,1); %1 chunky 2 planar
+                obj.TagList(37:39) = obj.TifTag(obj,'PlanarConfiguration','short',1,1); %1 chunky 2 planar
+                obj.TagList(40:42) = obj.TifTag(obj,'ResolutionUnit','short',1,3);%pixels per cm
                 obj.TagList(43:45) = obj.TifTag(obj,'SampleFormat','short',1,sf);
             else %check if the image is equal to the first image
                 if ndims(img)~=length(obj.imsize),error('different image dimensions');end
@@ -123,7 +142,12 @@ classdef Fast_Tiff_Write  < handle
             end
             obj.StripOffsets(end+1)=ftell(obj.fid);%start of the image
             if obj.isRGB,img = permute(img,[3,1,2]);end %chunky is accepted by more readers than planar
-            fwrite(obj.fid,img,obj.classname);
+            if obj.compression == 0
+                fwrite(obj.fid,img,obj.classname);
+            else
+                fwrite(obj.fid,obj.zip_bytes(typecast(img(:),'uint8'),obj.compression),'int8');
+            end
+            %obj.TagList(28:30) = obj.TifTag(obj,'StripByteCounts','long',1,ftell(obj.fid)-obj.StripOffsets(end)); %nr compressed bytes per image
             obj.Images_Written = obj.Images_Written+1;
         end
         function close(obj)
@@ -148,6 +172,16 @@ classdef Fast_Tiff_Write  < handle
     end
     
     methods (Static, Access=private)
+        function [out] = zip_bytes(input,level) % uses DEFLATE, build into java via Zlib
+            output      = java.io.ByteArrayOutputStream();
+            compresser  = java.util.zip.Deflater(level,false);  %the nowrap parameter set to false
+            outstrm     = java.util.zip.DeflaterOutputStream(output,compresser);
+            outstrm.write(input);
+            compresser.finish();
+            outstrm.close();
+            out=output.toByteArray();
+            %out(2)=0;
+        end
         function TT = TifTag(obj,TagId,DataType,DataCount,DataOffset) %12 bytes, 3 uint32s
             TT = zeros([1,3],'uint32');
             if ischar(TagId)
@@ -170,8 +204,8 @@ classdef Fast_Tiff_Write  < handle
                     1    , 2     , 3     , 4    , 5        , 6     , 7        , 8      , 9     , 10        , 11    , 12};
         end
         function out = TellTagTypes()
-            out = {'NewSubfileType', 'ImageWidth' , 'ImageLength' , 'BitsPerSample' , 'Compression' , 'PhotometricInterpretation' , 'StripOffsets' , 'SamplesPerPixel' , 'RowsPerStrip' , 'StripByteCounts' , 'XResolution' , 'YResolution' , 'ResolutionUnit' , 'PlanarConfiguration' , 'SampleFormat'; ...
-                    254            , 256          , 257           , 258             , 259           , 262                         , 273            , 277               , 278            , 279               , 282           , 283             , 296            , 284                   , 339};
+            out = {'NewSubfileType', 'ImageWidth' , 'ImageLength' , 'BitsPerSample' , 'Compression' , 'PhotometricInterpretation' , 'StripOffsets' , 'SamplesPerPixel' , 'RowsPerStrip' , 'StripByteCounts' , 'XResolution' , 'YResolution' , 'PlanarConfiguration' , 'ResolutionUnit' , 'SampleFormat'; ...
+                    254            , 256          , 257           , 258             , 259           , 262                         , 273            , 277               , 278            , 279               , 282           , 283           , 284                   , 296               , 339};
         end
     end
     

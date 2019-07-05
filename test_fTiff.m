@@ -1,7 +1,7 @@
 close all; clear all; clc;
 img=imread('landOcean.jpg');
 filename = 'test.tif';
-switch 'color_float'
+switch 'gray'
     case 'gray'
         img = uint16(sum(img,3));
         img = img-min(img(:));
@@ -17,13 +17,13 @@ switch 'color_float'
         img = single(img);
         img = img-min(img(:));
         img = img/max(img(:));
-        img2 = 1-img;
+        img2 = 1-img; %also write the inverted image
 end
 
 %write
-fTIF = Fast_Tiff_Write(filename);
-fTIF.WriteIMG(permute(img,[2,1,3]),0.125);
-fTIF.WriteIMG(permute(img2,[2,1,3]),0.125);
+fTIF = Fast_Tiff_Write(filename,0.125,1);
+fTIF.WriteIMG(permute(img,[2,1,3]));
+fTIF.WriteIMG(permute(img2,[2,1,3]));
 fTIF.close;
 %read
 I = imfinfo(filename);

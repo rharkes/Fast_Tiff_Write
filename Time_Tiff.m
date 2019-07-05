@@ -23,17 +23,17 @@ for M = 1:length(methods)
         case 'imwrite'
             tic;
             t(1)=0;
-            imwrite(IM(:,:,1),filename);
+            imwrite(IM(:,:,1),filename,'Compression','none');
             t(2)=toc;
             for ct = 2:100
-                imwrite(IM(:,:,ct),filename,'WriteMode','append');
+                imwrite(IM(:,:,ct),filename,'WriteMode','append','Compression','none');
                 t(ct+1)=toc;
             end
         case 'tifflib'
             t(1)=0;
             tic;
             tf = Tiff(filename,'w');
-            for ct = 1:200
+            for ct = 1:100
                 if ct>1,tf.writeDirectory;end
                 tf.setTag('Photometric',Tiff.Photometric.MinIsBlack);
                 tf.setTag('Compression',Tiff.Compression.None);
@@ -52,7 +52,7 @@ for M = 1:length(methods)
         case 'fTIF'
             t(1)=0;
             tic
-            fTIF = Fast_Tiff_Write(filename);
+            fTIF = Fast_Tiff_Write(filename,1,0);
             for ct = 1:size(IM,3)
                 fTIF.WriteIMG(IM(:,:,ct)');
                 t(ct)=toc;
@@ -72,3 +72,5 @@ for M = 1:length(methods)
     xlabel('Frame');
     drawnow;
 end
+f=gcf;f.Position=[1000 918 1175 420];
+saveas(f,'example.png')
