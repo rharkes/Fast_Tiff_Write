@@ -10,8 +10,8 @@ classdef Fast_Tiff_Write  < handle
     % 3) Adobe Photoshop® TIFF Technical Notes, published March 22, 2002 by Adobe Systems Incorporated
     % 4) Adobe Photoshop® TIFF Technical Note 3, published April 3, 2005 by Adobe Systems Incorporated
     
-    %Fast Tiff Write v2.0
-    %by R.Harkes 05-07-2019
+    %Fast Tiff Write v2.1
+    %by R.Harkes 26-03-2020
     
     %This program is free software: you can redistribute it and/or modify
     %it under the terms of the GNU General Public License as published by
