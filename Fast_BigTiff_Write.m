@@ -201,18 +201,10 @@ classdef Fast_BigTiff_Write  < handle
                 DataType = find(ismember(obj.DataTypes(1,:),DataType));
                 if isempty(DataType),error('unknown datatype');end
                 DataType = obj.DataTypes{2,DataType};
-            end  
-            DataCount_bin       = dec2bin(DataCount,64);
-            DataCount_bin_a     = DataCount_bin(1:32);
-            DataCount_bin_b     = DataCount_bin(33:64);
-            DataOffset_bin      = dec2bin(DataOffset,64);
-            DataOffset_bin_a    = DataOffset_bin(1:32);
-            DataOffset_bin_b    = DataOffset_bin(33:64);
-            TT(1) = uint32(TagId) + 2^16 * uint32(DataType); 
-            TT(2) = uint32(bin2dec(DataCount_bin_b)); 
-            TT(3) = uint32(bin2dec(DataCount_bin_a)); 
-            TT(4) = uint32(bin2dec(DataOffset_bin_b)); 
-            TT(5) = uint32(bin2dec(DataOffset_bin_a)); 
+            end
+            TT(1) = uint32(TagId) + 2^16 * uint32(DataType);
+            TT(2:3)=typecast(uint64(DataCount),'uint32');
+            TT(4:5)=typecast(uint64(DataOffset),'uint32');
         end
         function out = TellDataTypes()
             out = {'byte','ascii','short','long','rational','sbyte','undefine','sshort','slong','srational','float','double','TIFF_LONG8','TIFF_SLONG8','TIFF_IFD8'; ...
