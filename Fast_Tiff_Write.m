@@ -224,13 +224,13 @@ classdef Fast_Tiff_Write  < handle
         end        
         function writeWORD(obj,word)   %word: 16 bit
             if ischar(word)
-                word = uint16(word(1))+2^8 * uint16(word(2));
+                word = uint16(word(1)) + 2^8 * uint16(word(2));
             end
             fwrite(obj.fid,uint16(word),'uint16');
         end        
         function writeDWORD(obj,dword) %double word: 32bit
             if ischar(dword)
-                dword = uint32(dword(1))+2^8 * uint32(word(2))+2^16 * uint32(word(3))+2^24 * uint32(word(4));
+                dword = uint32(dword(1)) + 2^8*uint32(dword(2)) + 2^16*uint32(dword(3)) + 2^24*uint32(dword(4));
             end
             fwrite(obj.fid,uint32(dword),'uint32');
         end
