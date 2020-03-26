@@ -36,7 +36,8 @@ classdef Fast_Tiff_Write  < handle
         classname
         BytePerIm
         isRGB
-        StripOffsets %offsets to all images
+        dataStart %start byte for each images
+        dataEnd   %end byte for each image
     end
     properties (SetAccess = immutable, Hidden = true)
         filename
@@ -66,7 +67,8 @@ classdef Fast_Tiff_Write  < handle
             %write header
             obj.writeIFH(0);
             obj.TagList = uint32([]);
-            obj.StripOffsets = uint32([]);
+            obj.dataStart = uint32([]);
+            obj.dataEnd = uint32([]);
             obj.Images_Written=0;
             obj.Closed = false;
         end
@@ -140,25 +142,28 @@ classdef Fast_Tiff_Write  < handle
                 if ~all(size(img)==obj.imsize),error('different image size');end
                 if ~strcmp(class(img),obj.classname),error('different image type');end
             end
-            obj.StripOffsets(end+1)=ftell(obj.fid);%start of the image
+            obj.dataStart(end+1)=ftell(obj.fid);%start of the image
             if obj.isRGB,img = permute(img,[3,1,2]);end %chunky is accepted by more readers than planar
             if obj.compression == 0
                 fwrite(obj.fid,img,obj.classname);
             else
                 fwrite(obj.fid,obj.zip_bytes(typecast(img(:),'uint8'),obj.compression),'int8');
             end
-            %obj.TagList(28:30) = obj.TifTag(obj,'StripByteCounts','long',1,ftell(obj.fid)-obj.StripOffsets(end)); %nr compressed bytes per image
+            obj.dataEnd(end+1)=ftell(obj.fid);%end of the image
+            %StripByteCounts: For each strip, the number of bytes in the strip after compression
+            %obj.TagList(28:30) = obj.TifTag(obj,'StripByteCounts','long',1,ftell(obj.fid)-obj.StripOffsets(end)); %nr compressed bytes per image is variable and must be set when closing
             obj.Images_Written = obj.Images_Written+1;
         end
         function close(obj)
             %write all IFDs
             IFDOffset = ftell(obj.fid);%IFDOffset
-            for ct = 1:length(obj.StripOffsets)
+            for ct = 1:length(obj.dataStart)
                 TL = obj.TagList;
-                TL(19:21) = obj.TifTag(obj,'StripOffsets','long',1,obj.StripOffsets(ct));
+                TL(19:21) = obj.TifTag(obj,'StripOffsets','long',1,obj.dataStart(ct));
+                TL(28:30) = obj.TifTag(obj,'StripByteCounts','long',1,obj.dataEnd(ct)-obj.dataStart(ct));
                 obj.writeWORD(length(TL)/3); %nr of tags
                 fwrite(obj.fid,TL,'uint32'); %write entire taglist
-                if ct == length(obj.StripOffsets)
+                if ct == length(obj.dataStart)
                     obj.writeDWORD(0); %no next IFD
                 else
                     obj.writeDWORD(ftell(obj.fid)+4); %offset to next IFD
@@ -224,7 +229,7 @@ classdef Fast_Tiff_Write  < handle
         end        
         function writeWORD(obj,word)   %word: 16 bit
             if ischar(word)
-                word = uint16(word(1)) + 2^8 * uint16(word(2));
+                word = uint16(word(1)) + 2^8*uint16(word(2));
             end
             fwrite(obj.fid,uint16(word),'uint16');
         end        
