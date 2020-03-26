@@ -1,6 +1,7 @@
 close all; clear all; clc;
 img=imread('landOcean.jpg');
 filename = 'test.tif';
+compression = 0;
 switch 'gray'
     case 'gray'
         img = uint16(sum(img,3));
@@ -21,7 +22,7 @@ switch 'gray'
 end
 
 %write
-fTIF = Fast_Tiff_Write(filename,0.125,1);
+fTIF = Fast_Tiff_Write(filename,0.125,compression);
 fTIF.WriteIMG(permute(img,[2,1,3]));
 fTIF.WriteIMG(permute(img2,[2,1,3]));
 fTIF.close;
