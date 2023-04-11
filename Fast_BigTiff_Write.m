@@ -6,9 +6,9 @@ classdef Fast_BigTiff_Write  < handle
     %Adobe Systems Incorporated on 1st of September  1994.
     %Following documents contain canonical TIFF specifications:
     % 1) Tiff Revison 6.0, published June 3, 1992 by Aldus Corporation
-    % 2) Adobe PageMaker® 6.0 TIFF Technical Notes, published September 14, 1995 by Adobe Systems Incorporated
-    % 3) Adobe Photoshop® TIFF Technical Notes, published March 22, 2002 by Adobe Systems Incorporated
-    % 4) Adobe Photoshop® TIFF Technical Note 3, published April 3, 2005 by Adobe Systems Incorporated
+    % 2) Adobe PageMaker 6.0 TIFF Technical Notes, published September 14, 1995 by Adobe Systems Incorporated
+    % 3) Adobe Photoshop TIFF Technical Notes, published March 22, 2002 by Adobe Systems Incorporated
+    % 4) Adobe Photoshop TIFF Technical Note 3, published April 3, 2005 by Adobe Systems Incorporated
     
     %Fast Big Tiff Write v2.1
     %by R.Harkes 26-03-2020
@@ -108,8 +108,8 @@ classdef Fast_BigTiff_Write  < handle
                 
                 %construct the taglist (must be stored in ascending order)
                 obj.TagList(1:5) = obj.TifTag(obj,'NewSubfileType','long',1,0);
-                obj.TagList(6:10) = obj.TifTag(obj,'ImageWidth','long',1,size(img,1));
-                obj.TagList(11:15) = obj.TifTag(obj,'ImageLength','long',1,size(img,2));
+                obj.TagList(6:10) = obj.TifTag(obj,'ImageWidth','long',1,size(img,2));
+                obj.TagList(11:15) = obj.TifTag(obj,'ImageLength','long',1,size(img,1));
                 if obj.compression ==0
                     obj.TagList(21:25) = obj.TifTag(obj,'Compression','short',1,1); %no compression
                 else
@@ -129,7 +129,7 @@ classdef Fast_BigTiff_Write  < handle
                     obj.TagList(26:30) = obj.TifTag(obj,'PhotometricInterpretation','short',1,1); %BlackIsZero
                     obj.TagList(36:40) = obj.TifTag(obj,'SamplesPerPixel','short',1,1);
                 end
-                obj.TagList(41:45) = obj.TifTag(obj,'RowsPerStrip','long',1,size(img,2)); %entire image is one strip
+                obj.TagList(41:45) = obj.TifTag(obj,'RowsPerStrip','long',1,size(img,1)); %entire image is one strip
                 %obj.TagList(46:50) = obj.TifTag(obj,'StripByteCounts','TIFF_LONG8',1,obj.BytePerIm); %nr bytes per image, varies with compression so is set at the end when closing the file
                 %a rational is stored in BigTiff as two 32bit values.
                 obj.TagList(51:55) = obj.TifTag(obj,'XResolution','rational',1,obj.getRat(obj.pixelsize)); 
@@ -143,7 +143,11 @@ classdef Fast_BigTiff_Write  < handle
                 if ~strcmp(class(img),obj.classname),error('different image type');end
             end
             obj.dataStart(end+1)=ftell(obj.fid);%start of the image
-            if obj.isRGB,img = permute(img,[3,1,2]);end %chunky is accepted by more readers than planar
+            if obj.isRGB
+                img = permute(img,[3,2,1]);%chunky is accepted by more readers than planar
+            else
+                img = permute(img,[2, 1]); % matlab stores col-major, but tif wants row-major (https://github.com/rharkes/Fast_Tiff_Write/issues/2)
+            end
             if obj.compression == 0
                 fwrite(obj.fid,img,obj.classname);
             else
