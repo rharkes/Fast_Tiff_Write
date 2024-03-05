@@ -95,6 +95,8 @@ classdef Fast_Tiff_Write  < handle
                         bps = 1;sf=1;
                     case {'int16'}
                         bps = 2;sf=2;
+                    case {'int8'}
+                        bps = 1;sf=2;
                     otherwise
                         error('class not supported')
                 end
