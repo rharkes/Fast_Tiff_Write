@@ -7,4 +7,6 @@ For Python there is [tiffwrite](https://pypi.org/project/tiffwrite/) that is fas
 
 ![Writing speed comparison](example.png?raw=true "Writing speed comparison")
 
+The tifflib implentation [has been improved](https://github.com/rharkes/Fast_Tiff_Write/issues/7) over the years since this package came out.
+
 [![View Multi-image Tiff Writer on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://nl.mathworks.com/matlabcentral/fileexchange/69965-multi-image-tiff-writer)
